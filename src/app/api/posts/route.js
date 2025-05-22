@@ -15,14 +15,13 @@ export async function GET() {
 
 export async function POST(request) {
   try {
-    const { title, content, mediaUrls } = await request.json();
-    console.log('Received data:', { title, content, mediaUrls });
+    const { title, content } = await request.json();
+    console.log('Received data:', { title, content });
     
     const newPost = await prisma.post.create({
       data: {
         title,
         content,
-        mediaUrls,
       },
     });
     return NextResponse.json(newPost, { status: 201 });

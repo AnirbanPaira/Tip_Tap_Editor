@@ -1,4 +1,4 @@
-export const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+export const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
 /**
  * Checks if a mark exists in the editor schema
@@ -126,13 +126,63 @@ export const handleImageUpload = async (file, onProgress, abortSignal) => {
     throw new Error(`File size exceeds maximum allowed (${MAX_FILE_SIZE / (1024 * 1024)}MB)`)
   }
 
-  // For demo/testing: Simulate upload progress
-  for (let progress = 0; progress <= 100; progress += 10) {
-    if (abortSignal?.aborted) {
-      throw new Error("Upload cancelled")
-    }
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    onProgress?.({ progress })
+  // Get pre-signed URL from the API route
+  const response = await fetch("/api/upload", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      filename: file.name,
+      contentType: file.type,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Failed to get pre-signed URL: ${error.error}`);
+  }
+
+  const { url: signedUrl } = await response.json();
+
+  // Upload the file to S3 using the pre-signed URL
+  const uploadResponse = await fetch(signedUrl, {
+    method: "PUT",
+    body: file,
+    signal: abortSignal,
+    headers: {
+      "Content-Type": file.type,
+    },
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error(`Failed to upload file to S3: ${uploadResponse.statusText}`);
+  }
+
+  // Construct the public URL of the uploaded file
+  // Assuming the S3 bucket is configured for public read access
+  const bucketName = process.env.NEXT_PUBLIC_S3_BUCKET_NAME; // Use NEXT_PUBLIC for client-side access
+  const region = process.env.NEXT_PUBLIC_S3_REGION; // Use NEXT_PUBLIC for client-side access
+  const fileUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${file.name}`;
+
+  return fileUrl;
+}
+
+/**
+ * Handles video upload with progress tracking and abort capability
+ * @param file The file to upload
+ * @param onProgress Optional callback for tracking upload progress
+ * @param abortSignal Optional AbortSignal for cancelling the upload
+ * @returns Promise resolving to the URL of the uploaded video
+ */
+export const handleVideoUpload = async (file, onProgress, abortSignal) => {
+  // Validate file
+  if (!file) {
+    throw new Error("No file provided")
+  }
+
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error(`File size exceeds maximum allowed (${MAX_FILE_SIZE / (1024 * 1024)}MB)`)
   }
 
   // Get pre-signed URL from the API route
@@ -176,6 +226,7 @@ export const handleImageUpload = async (file, onProgress, abortSignal) => {
 
   return fileUrl;
 }
+
 
 /**
  * Converts a File to base64 string (Not used for S3 upload)

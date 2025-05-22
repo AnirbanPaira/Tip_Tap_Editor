@@ -31,6 +31,8 @@ import {
 
 // --- Tiptap Node ---
 import { ImageUploadNode } from "@/components/tiptap-node/image-upload-node/image-upload-node-extension"
+import { VideoUploadNode } from "@/components/tiptap-node/video-upload-node/video-upload-node-extension"
+import { VideoNode } from "@/components/tiptap-node/video-node/video-node-extension" // Import the new VideoNode
 import "@/components/tiptap-node/code-block-node/code-block-node.scss"
 import "@/components/tiptap-node/list-node/list-node.scss"
 import "@/components/tiptap-node/image-node/image-node.scss"
@@ -39,6 +41,7 @@ import "@/components/tiptap-node/paragraph-node/paragraph-node.scss"
 // --- Tiptap UI ---
 import { HeadingDropdownMenu } from "@/components/tiptap-ui/heading-dropdown-menu"
 import { ImageUploadButton } from "@/components/tiptap-ui/image-upload-button"
+import VideoUploadButton from "@/components/tiptap-ui/video-upload-button/video-upload-button"
 import { ListDropdownMenu } from "@/components/tiptap-ui/list-dropdown-menu"
 import { BlockQuoteButton } from "@/components/tiptap-ui/blockquote-button"
 import { CodeBlockButton } from "@/components/tiptap-ui/code-block-button"
@@ -70,7 +73,7 @@ import { useCursorVisibility } from "@/hooks/use-cursor-visibility"
 import { ThemeToggle } from "@/components/tiptap-templates/simple/theme-toggle"
 
 // --- Lib ---
-import { handleImageUpload, MAX_FILE_SIZE } from "@/lib/tiptap-utils"
+import { handleImageUpload, handleVideoUpload, MAX_FILE_SIZE } from "@/lib/tiptap-utils"
 
 // --- Styles ---
 import "@/components/tiptap-templates/simple/simple-editor.scss"
@@ -123,6 +126,7 @@ const MainToolbarContent = ({
       <ToolbarSeparator />
       <ToolbarGroup>
         <ImageUploadButton text="Add" />
+        <VideoUploadButton text="Add" />
       </ToolbarGroup>
       <Spacer />
       {isMobile && <ToolbarSeparator />}
@@ -184,6 +188,7 @@ export function SimpleEditor({ initialContent, onUpdate, editable = true }) {
       TaskItem.configure({ nested: true }),
       Highlight.configure({ multicolor: true }),
       Image,
+      VideoNode, // Add the new VideoNode extension
       Typography,
       Superscript,
       Subscript,
@@ -196,13 +201,20 @@ export function SimpleEditor({ initialContent, onUpdate, editable = true }) {
         upload: handleImageUpload,
         onError: (error) => console.error("Upload failed:", error),
       }),
+      VideoUploadNode.configure({
+        accept: "video/*",
+        maxSize: MAX_FILE_SIZE, // Assuming the same max file size for videos
+        limit: 3, // Assuming the same limit for videos
+        upload: handleVideoUpload, // Assuming the same upload handler can be adapted for videos
+        onError: (error) => console.error("Video upload failed:", error),
+      }),
       TrailingNode,
       Link.configure({ openOnClick: false }),
     ],
     content: initialContent,
     onUpdate: ({ editor }) => {
       // Extract content as JSON and pass it to the onUpdate prop
-      onUpdate(editor.getHTML());
+      onUpdate(editor.getJSON());
     },
   });
 

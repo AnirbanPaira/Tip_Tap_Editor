@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 const prisma = new PrismaClient();
 
 export async function GET(request, { params }) {
-  const { id } = params;
+  const { id } = await params;
   try {
     const post = await prisma.post.findUnique({
       where: { id: id },
@@ -22,13 +22,12 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
   const { id } = params;
   try {
-    const { title, content, mediaUrls } = await request.json();
+    const { title, content } = await request.json();
     const updatedPost = await prisma.post.update({
       where: { id: id },
       data: {
         title,
         content,
-        mediaUrls,
       },
     });
     return NextResponse.json(updatedPost);
