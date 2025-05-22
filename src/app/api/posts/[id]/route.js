@@ -7,7 +7,7 @@ export async function GET(request, { params }) {
   const { id } = params;
   try {
     const post = await prisma.post.findUnique({
-      where: { id },
+      where: { id: id },
     });
     if (!post) {
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });
@@ -24,7 +24,7 @@ export async function PUT(request, { params }) {
   try {
     const { title, content, mediaUrls } = await request.json();
     const updatedPost = await prisma.post.update({
-      where: { id },
+      where: { id: id },
       data: {
         title,
         content,
@@ -42,7 +42,7 @@ export async function DELETE(request, { params }) {
   const { id } = params;
   try {
     await prisma.post.delete({
-      where: { id },
+      where: { id: id },
     });
     return NextResponse.json({ message: 'Post deleted successfully' });
   } catch (error) {

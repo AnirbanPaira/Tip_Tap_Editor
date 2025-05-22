@@ -16,6 +16,8 @@ export async function GET() {
 export async function POST(request) {
   try {
     const { title, content, mediaUrls } = await request.json();
+    console.log('Received data:', { title, content, mediaUrls });
+    
     const newPost = await prisma.post.create({
       data: {
         title,

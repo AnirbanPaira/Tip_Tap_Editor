@@ -1,57 +1,83 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { SimpleEditor } from '@/components/tiptap-templates/simple/simple-editor';
 import Link from 'next/link';
 import { 
   Sparkles, 
-  Plus, 
-  BookOpen, 
+  Send, 
+  ArrowLeft, 
   Edit3, 
   FileText, 
   Wand2, 
   Stars,
   Zap,
-  ArrowRight,
-  Calendar,
-  User
+  Loader2,
+  PenTool
 } from 'lucide-react';
 
-async function getPosts() {
+async function createPost({ title, content }) {
   const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/posts`, {
-    cache: 'no-store',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ title, content }),
   });
   if (!res.ok) {
-    throw new Error('Failed to fetch posts');
+    throw new Error('Failed to create post');
   }
   return res.json();
 }
 
-export default function PostsPage({ posts: initialPosts }) {
-  const [posts, setPosts] = useState(initialPosts || []);
+export default function CreatePostPage() {
+  const router = useRouter();
+  const [title, setTitle] = useState('');
+  const [editorContent, setEditorContent] = useState('');
+  const [loading, setLoading] = useState(false);
   const [isClient, setIsClient] = useState(false);
-  const [hoveredPost, setHoveredPost] = useState(null);
+  
+  // State for hover effects
+  const [titleHovered, setTitleHovered] = useState(false);
+  const [editorHovered, setEditorHovered] = useState(false);
   const [createHovered, setCreateHovered] = useState(false);
+  const [cancelHovered, setCancelHovered] = useState(false);
+  const [titleFocused, setTitleFocused] = useState(false);
 
   // Fixed particle positions to avoid hydration mismatch
   const particlePositions = [
-    { left: '15%', top: '25%', delay: '0s' },
-    { left: '80%', top: '20%', delay: '0.7s' },
-    { left: '25%', top: '75%', delay: '1.2s' },
-    { left: '85%', top: '60%', delay: '1.8s' },
-    { left: '10%', top: '50%', delay: '2.4s' },
-    { left: '70%', top: '35%', delay: '0.4s' },
-    { left: '40%', top: '15%', delay: '1.1s' },
-    { left: '55%', top: '80%', delay: '1.6s' },
-    { left: '90%', top: '45%', delay: '2.1s' },
-    { left: '30%', top: '60%', delay: '0.9s' },
+    { left: '10%', top: '20%', delay: '0s' },
+    { left: '85%', top: '15%', delay: '0.5s' },
+    { left: '20%', top: '80%', delay: '1s' },
+    { left: '90%', top: '70%', delay: '1.5s' },
+    { left: '5%', top: '60%', delay: '2s' },
+    { left: '75%', top: '40%', delay: '2.5s' },
+    { left: '45%', top: '10%', delay: '3s' },
+    { left: '60%', top: '85%', delay: '0.3s' },
+    { left: '15%', top: '45%', delay: '0.8s' },
+    { left: '80%', top: '25%', delay: '1.3s' },
+    { left: '35%', top: '70%', delay: '1.8s' },
+    { left: '95%', top: '50%', delay: '2.3s' },
+    { left: '25%', top: '30%', delay: '2.8s' },
+    { left: '70%', top: '60%', delay: '0.2s' },
+    { left: '50%', top: '90%', delay: '0.7s' },
   ];
 
   useEffect(() => {
     setIsClient(true);
-    // Fetch posts if not provided via props
-    if (!initialPosts) {
-      getPosts().then(setPosts).catch(console.error);
+  }, []);
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const newPost = await createPost({ title, content: editorContent });
+      router.push(`/posts/${newPost.id}`);
+    } catch (error) {
+      console.error('Error creating post:', error);
+      alert('Failed to create post');
+      setLoading(false);
     }
-  }, [initialPosts]);
+  };
 
   const containerStyle = {
     minHeight: '100vh',
@@ -111,71 +137,77 @@ export default function PostsPage({ posts: initialPosts }) {
     letterSpacing: '1px',
   };
 
-  const postsContainerStyle = {
-    display: 'grid',
-    gap: '30px',
-    marginBottom: '60px',
-  };
-
-  const postCardStyle = {
+  const cardStyle = {
     background: 'rgba(255, 255, 255, 0.05)',
     backdropFilter: 'blur(20px)',
     border: '1px solid rgba(255, 255, 255, 0.1)',
     borderRadius: '24px',
-    padding: '30px',
+    padding: '40px',
+    marginBottom: '30px',
     position: 'relative',
     overflow: 'hidden',
     transition: 'all 0.3s ease',
     boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
-    cursor: 'pointer',
   };
 
-  const postCardHoverStyle = {
-    ...postCardStyle,
-    transform: 'translateY(-8px)',
+  const cardHoverStyle = {
+    ...cardStyle,
+    transform: 'translateY(-5px)',
     boxShadow: '0 30px 60px rgba(0, 0, 0, 0.2)',
     border: '1px solid rgba(255, 255, 255, 0.2)',
-    background: 'rgba(255, 255, 255, 0.08)',
   };
 
-  const postTitleStyle = {
-    color: 'white',
-    fontSize: '1.8rem',
-    fontWeight: '700',
-    marginBottom: '15px',
-    textDecoration: 'none',
+  const labelStyle = {
     display: 'flex',
     alignItems: 'center',
-    gap: '15px',
-    lineHeight: '1.3',
-  };
-
-  const postMetaStyle = {
-    color: 'rgba(255, 255, 255, 0.5)',
+    gap: '12px',
+    color: 'rgba(255, 255, 255, 0.9)',
     fontSize: '0.9rem',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '20px',
-    marginBottom: '15px',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '1px',
+    marginBottom: '20px',
   };
 
-  const readMoreStyle = {
-    color: 'rgba(120, 119, 198, 0.8)',
-    fontSize: '0.95rem',
-    fontWeight: '500',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
+  const inputStyle = {
+    width: '100%',
+    background: 'rgba(0, 0, 0, 0.3)',
+    border: '2px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: '16px',
+    padding: '20px 24px',
+    color: 'white',
+    fontSize: '1.2rem',
+    fontWeight: '400',
+    outline: 'none',
     transition: 'all 0.3s ease',
+    backdropFilter: 'blur(10px)',
   };
 
-  const readMoreHoverStyle = {
-    ...readMoreStyle,
-    color: 'rgba(120, 119, 198, 1)',
-    transform: 'translateX(5px)',
+  const inputFocusStyle = {
+    ...inputStyle,
+    border: '2px solid rgba(120, 119, 198, 0.6)',
+    boxShadow: '0 0 0 4px rgba(120, 119, 198, 0.1)',
+    background: 'rgba(0, 0, 0, 0.4)',
   };
 
-  const createButtonStyle = {
+  const editorContainerStyle = {
+    background: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: '20px',
+    padding: '30px',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    minHeight: '400px',
+    backdropFilter: 'blur(10px)',
+  };
+
+  const buttonContainerStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '30px',
+    marginTop: '40px',
+  };
+
+  const primaryButtonStyle = {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
@@ -183,29 +215,51 @@ export default function PostsPage({ posts: initialPosts }) {
     color: 'white',
     border: 'none',
     borderRadius: '50px',
-    padding: '20px 40px',
-    fontSize: '1.2rem',
+    padding: '18px 36px',
+    fontSize: '1.1rem',
     fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    boxShadow: '0 10px 30px rgba(102, 126, 234, 0.3)',
+    position: 'relative',
+    overflow: 'hidden',
+  };
+
+  const primaryButtonHoverStyle = {
+    ...primaryButtonStyle,
+    transform: 'translateY(-3px)',
+    boxShadow: '0 15px 40px rgba(102, 126, 234, 0.4)',
+  };
+
+  const disabledButtonStyle = {
+    ...primaryButtonStyle,
+    background: 'rgba(255, 255, 255, 0.1)',
+    cursor: 'not-allowed',
+    boxShadow: 'none',
+  };
+
+  const secondaryButtonStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    background: 'transparent',
+    color: 'rgba(255, 255, 255, 0.7)',
+    border: '2px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: '50px',
+    padding: '16px 32px',
+    fontSize: '1rem',
+    fontWeight: '500',
     textDecoration: 'none',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
-    boxShadow: '0 15px 35px rgba(102, 126, 234, 0.3)',
-    position: 'relative',
-    overflow: 'hidden',
-    margin: '0 auto',
-    width: 'fit-content',
+    backdropFilter: 'blur(10px)',
   };
 
-  const createButtonHoverStyle = {
-    ...createButtonStyle,
-    transform: 'translateY(-3px)',
-    boxShadow: '0 20px 45px rgba(102, 126, 234, 0.4)',
-  };
-
-  const emptyStateStyle = {
-    textAlign: 'center',
-    padding: '80px 40px',
-    color: 'rgba(255, 255, 255, 0.6)',
+  const secondaryButtonHoverStyle = {
+    ...secondaryButtonStyle,
+    color: 'white',
+    border: '2px solid rgba(255, 255, 255, 0.4)',
+    background: 'rgba(255, 255, 255, 0.05)',
   };
 
   const decorativeLineStyle = {
@@ -269,8 +323,8 @@ export default function PostsPage({ posts: initialPosts }) {
               <Stars size={32} color="rgba(255, 255, 255, 0.4)" />
             </div>
             <h1 style={titleStyle}>
-              <BookOpen size={60} style={{ display: 'inline-block', marginRight: '20px', verticalAlign: 'middle' }} />
-              Story Archive
+              <Wand2 size={60} style={{ display: 'inline-block', marginRight: '20px', verticalAlign: 'middle' }} />
+              Create Magic
             </h1>
             <div style={{
               position: 'absolute',
@@ -283,88 +337,103 @@ export default function PostsPage({ posts: initialPosts }) {
           </div>
           <p style={subtitleStyle}>
             <Zap size={20} style={{ display: 'inline-block', marginRight: '10px', verticalAlign: 'middle' }} />
-            A collection of extraordinary tales
+            Where extraordinary ideas come to life
           </p>
         </div>
 
-        {/* Posts List */}
-        {posts && posts.length > 0 ? (
-          <div style={postsContainerStyle}>
-            {posts.map((post) => (
-              <Link 
-                key={post.id} 
-                href={`/posts/${post.id}`}
-                style={{ textDecoration: 'none' }}
-              >
-                <div 
-                  style={hoveredPost === post.id ? postCardHoverStyle : postCardStyle}
-                  onMouseEnter={() => setHoveredPost(post.id)}
-                  onMouseLeave={() => setHoveredPost(null)}
-                >
-                  <div style={{
-                    position: 'absolute',
-                    top: '20px',
-                    right: '20px',
-                    opacity: '0.3',
-                  }}>
-                    <FileText size={24} color="white" />
-                  </div>
-                  
-                  <h2 style={postTitleStyle}>
-                    <Edit3 size={24} color="rgba(120, 119, 198, 0.8)" />
-                    {post.title || 'Untitled Story'}
-                  </h2>
-                  
-                  <div style={postMetaStyle}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Calendar size={14} />
-                      {post.createdAt ? new Date(post.createdAt).toLocaleDateString() : 'Recently'}
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <User size={14} />
-                      Author
-                    </span>
-                  </div>
-                  
-                  <div style={hoveredPost === post.id ? readMoreHoverStyle : readMoreStyle}>
-                    <span>Continue reading</span>
-                    <ArrowRight size={16} />
-                  </div>
-                </div>
-              </Link>
-            ))}
+        {/* Title Input Card */}
+        <div 
+          style={titleHovered ? cardHoverStyle : cardStyle}
+          onMouseEnter={() => setTitleHovered(true)}
+          onMouseLeave={() => setTitleHovered(false)}
+        >
+          <div style={{
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            opacity: '0.3',
+          }}>
+            <FileText size={24} color="white" />
           </div>
-        ) : (
-          <div style={emptyStateStyle}>
-            <Wand2 size={80} color="rgba(255, 255, 255, 0.3)" style={{ marginBottom: '30px' }} />
-            <h3 style={{ 
-              fontSize: '2rem', 
-              fontWeight: '600', 
-              marginBottom: '15px',
-              color: 'rgba(255, 255, 255, 0.7)'
-            }}>
-              No Stories Yet
-            </h3>
-            <p style={{ 
-              fontSize: '1.1rem', 
-              marginBottom: '30px',
-              color: 'rgba(255, 255, 255, 0.5)'
-            }}>
-              The archive awaits your first masterpiece
-            </p>
-          </div>
-        )}
+          
+          <label style={labelStyle}>
+            <Edit3 size={18} />
+            Title of Your Masterpiece
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onFocus={() => setTitleFocused(true)}
+            onBlur={() => setTitleFocused(false)}
+            placeholder="Enter something extraordinary..."
+            style={titleFocused ? inputFocusStyle : inputStyle}
+          />
+        </div>
 
-        {/* Create New Post Button */}
-        <div style={{ textAlign: 'center', marginTop: '60px' }}>
-          <Link 
-            href="/posts/create"
+        {/* Editor Card */}
+        <div 
+          style={editorHovered ? cardHoverStyle : cardStyle}
+          onMouseEnter={() => setEditorHovered(true)}
+          onMouseLeave={() => setEditorHovered(false)}
+        >
+          <div style={{
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            opacity: '0.3',
+          }}>
+            <PenTool size={24} color="white" />
+          </div>
+          
+          <label style={labelStyle}>
+            <Edit3 size={18} />
+            Craft Your Story
+          </label>
+          <div style={editorContainerStyle}>
+            <SimpleEditor
+              initialContent=""
+              onUpdate={(htmlContent) => setEditorContent(htmlContent)}
+            />
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div style={buttonContainerStyle}>
+          <button
+            onClick={handleSave}
+            disabled={loading || !title.trim() || !editorContent.trim()}
             onMouseEnter={() => setCreateHovered(true)}
             onMouseLeave={() => setCreateHovered(false)}
-            style={createHovered ? createButtonHoverStyle : createButtonStyle}
+            style={
+              loading || !title.trim() || !editorContent.trim() 
+                ? disabledButtonStyle 
+                : createHovered 
+                  ? primaryButtonHoverStyle 
+                  : primaryButtonStyle
+            }
           >
-            <Plus size={24} />
-            Begin New Story
+            {loading ? (
+              <>
+                <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                Creating Magic...
+              </>
+            ) : (
+              <>
+                <Send size={20} />
+                Launch Creation
+              </>
+            )}
+          </button>
+
+          <Link 
+            href="/posts"
+            onMouseEnter={() => setCancelHovered(true)}
+            onMouseLeave={() => setCancelHovered(false)}
+            style={cancelHovered ? secondaryButtonHoverStyle : secondaryButtonStyle}
+          >
+            <ArrowLeft size={18} />
+            Return
           </Link>
         </div>
 
@@ -372,7 +441,7 @@ export default function PostsPage({ posts: initialPosts }) {
         <div style={decorativeLineStyle}>
           <div style={lineStyle}></div>
           <Sparkles size={16} />
-          <span>Where stories live forever</span>
+          <span>Where creativity meets innovation</span>
           <Sparkles size={16} />
           <div style={lineStyle}></div>
         </div>
@@ -414,6 +483,11 @@ export default function PostsPage({ posts: initialPosts }) {
             opacity: 0.8; 
             transform: scale(1.1);
           }
+        }
+        
+        input::placeholder {
+          color: rgba(255, 255, 255, 0.4);
+          font-style: italic;
         }
         
         /* Custom scrollbar */

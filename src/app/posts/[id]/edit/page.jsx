@@ -1,21 +1,21 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { SimpleEditor } from '@/components/tiptap-templates/simple/simple-editor';
 import Link from 'next/link';
 import { 
   Sparkles, 
-  Edit3, 
-  Trash2, 
+  Save, 
   ArrowLeft, 
+  Edit3, 
   FileText, 
   Wand2, 
   Stars,
   Zap,
   Loader2,
-  Calendar,
-  User,
-  Eye
+  PenTool,
+  RefreshCw
 } from 'lucide-react';
 
 async function getPost(id) {
@@ -28,52 +28,70 @@ async function getPost(id) {
   return res.json();
 }
 
-async function deletePost(id) {
+async function updatePost(id, data) {
   const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/posts/${id}`, {
-    method: 'DELETE',
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
   });
   
   if (!res.ok) {
-    throw new Error('Failed to delete post');
+    throw new Error('Failed to update post');
   }
   
   return res.json();
 }
 
-export default function PostDetailPage() {
+export default function EditPostPage() {
   const { id } = useParams();
   const router = useRouter();
   const [post, setPost] = useState(null);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [isClient, setIsClient] = useState(false);
   
   // State for hover effects
-  const [editHovered, setEditHovered] = useState(false);
-  const [deleteHovered, setDeleteHovered] = useState(false);
-  const [backHovered, setBackHovered] = useState(false);
+  const [titleHovered, setTitleHovered] = useState(false);
+  const [editorHovered, setEditorHovered] = useState(false);
+  const [saveHovered, setSaveHovered] = useState(false);
+  const [cancelHovered, setCancelHovered] = useState(false);
+  const [titleFocused, setTitleFocused] = useState(false);
 
   // Fixed particle positions to avoid hydration mismatch
   const particlePositions = [
-    { left: '12%', top: '18%', delay: '0s' },
-    { left: '88%', top: '25%', delay: '0.6s' },
-    { left: '22%', top: '78%', delay: '1.1s' },
-    { left: '85%', top: '65%', delay: '1.7s' },
-    { left: '8%', top: '55%', delay: '2.2s' },
-    { left: '75%', top: '40%', delay: '0.3s' },
-    { left: '35%', top: '12%', delay: '0.9s' },
-    { left: '60%', top: '82%', delay: '1.4s' },
-    { left: '92%', top: '48%', delay: '1.9s' },
-    { left: '28%', top: '62%', delay: '0.8s' },
+    { left: '10%', top: '20%', delay: '0s' },
+    { left: '85%', top: '15%', delay: '0.5s' },
+    { left: '20%', top: '80%', delay: '1s' },
+    { left: '90%', top: '70%', delay: '1.5s' },
+    { left: '5%', top: '60%', delay: '2s' },
+    { left: '75%', top: '40%', delay: '2.5s' },
+    { left: '45%', top: '10%', delay: '3s' },
+    { left: '60%', top: '85%', delay: '0.3s' },
+    { left: '15%', top: '45%', delay: '0.8s' },
+    { left: '80%', top: '25%', delay: '1.3s' },
+    { left: '35%', top: '70%', delay: '1.8s' },
+    { left: '95%', top: '50%', delay: '2.3s' },
+    { left: '25%', top: '30%', delay: '2.8s' },
+    { left: '70%', top: '60%', delay: '0.2s' },
+    { left: '50%', top: '90%', delay: '0.7s' },
   ];
 
   useEffect(() => {
     setIsClient(true);
-    
+  }, []);
+
+  useEffect(() => {
     const fetchPost = async () => {
       try {
         const postData = await getPost(id);
         setPost(postData);
+        setTitle(postData.title);
+        setContent(postData.content);
       } catch (err) {
         setError(err);
       } finally {
@@ -86,15 +104,16 @@ export default function PostDetailPage() {
     }
   }, [id]);
 
-  const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this magical story? This action cannot be undone.')) {
-      try {
-        await deletePost(id);
-        router.push('/posts');
-      } catch (err) {
-        console.error('Error deleting post:', err);
-        alert('Failed to delete post');
-      }
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await updatePost(id, { title, content });
+      router.push(`/posts/${id}`); // Redirect to the post detail page
+    } catch (err) {
+      console.error('Error saving post:', err);
+      alert('Failed to save post');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -130,29 +149,6 @@ export default function PostDetailPage() {
     animation: `float 12s ease-in-out infinite ${delay}`,
   });
 
-  const loadingStyle = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: '1.2rem',
-    gap: '20px',
-  };
-
-  const errorStyle = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
-    color: 'rgba(255, 119, 119, 0.9)',
-    fontSize: '1.2rem',
-    textAlign: 'center',
-    gap: '20px',
-  };
-
   const headerStyle = {
     textAlign: 'center',
     marginBottom: '60px',
@@ -161,26 +157,22 @@ export default function PostDetailPage() {
   };
 
   const titleStyle = {
-    fontSize: '4rem',
+    fontSize: '4.5rem',
     fontWeight: '800',
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     backgroundClip: 'text',
     marginBottom: '20px',
-    letterSpacing: '-1px',
+    letterSpacing: '-2px',
     lineHeight: '1.1',
   };
 
-  const postMetaStyle = {
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: '1rem',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '30px',
-    marginBottom: '40px',
-    flexWrap: 'wrap',
+  const subtitleStyle = {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: '1.3rem',
+    fontWeight: '300',
+    letterSpacing: '1px',
   };
 
   const cardStyle = {
@@ -189,73 +181,102 @@ export default function PostDetailPage() {
     border: '1px solid rgba(255, 255, 255, 0.1)',
     borderRadius: '24px',
     padding: '40px',
-    marginBottom: '40px',
+    marginBottom: '30px',
     position: 'relative',
     overflow: 'hidden',
+    transition: 'all 0.3s ease',
     boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
   };
 
-  const contentStyle = {
+  const cardHoverStyle = {
+    ...cardStyle,
+    transform: 'translateY(-5px)',
+    boxShadow: '0 30px 60px rgba(0, 0, 0, 0.2)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+  };
+
+  const labelStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
     color: 'rgba(255, 255, 255, 0.9)',
-    lineHeight: '1.8',
-    fontSize: '1.1rem',
+    fontSize: '0.9rem',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '1px',
+    marginBottom: '20px',
+  };
+
+  const inputStyle = {
+    width: '100%',
+    background: 'rgba(0, 0, 0, 0.3)',
+    border: '2px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: '16px',
+    padding: '20px 24px',
+    color: 'white',
+    fontSize: '1.2rem',
+    fontWeight: '400',
+    outline: 'none',
+    transition: 'all 0.3s ease',
+    backdropFilter: 'blur(10px)',
+  };
+
+  const inputFocusStyle = {
+    ...inputStyle,
+    border: '2px solid rgba(120, 119, 198, 0.6)',
+    boxShadow: '0 0 0 4px rgba(120, 119, 198, 0.1)',
+    background: 'rgba(0, 0, 0, 0.4)',
+  };
+
+  const editorContainerStyle = {
+    background: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: '20px',
+    padding: '30px',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    minHeight: '400px',
+    backdropFilter: 'blur(10px)',
   };
 
   const buttonContainerStyle = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '25px',
-    marginTop: '50px',
-    flexWrap: 'wrap',
+    gap: '30px',
+    marginTop: '40px',
   };
 
-  const editButtonStyle = {
+  const primaryButtonStyle = {
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
+    gap: '12px',
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     color: 'white',
     border: 'none',
     borderRadius: '50px',
-    padding: '16px 32px',
-    fontSize: '1rem',
+    padding: '18px 36px',
+    fontSize: '1.1rem',
     fontWeight: '600',
-    textDecoration: 'none',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
     boxShadow: '0 10px 30px rgba(102, 126, 234, 0.3)',
+    position: 'relative',
+    overflow: 'hidden',
   };
 
-  const editButtonHoverStyle = {
-    ...editButtonStyle,
+  const primaryButtonHoverStyle = {
+    ...primaryButtonStyle,
     transform: 'translateY(-3px)',
     boxShadow: '0 15px 40px rgba(102, 126, 234, 0.4)',
   };
 
-  const deleteButtonStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-    color: 'white',
-    border: 'none',
-    borderRadius: '50px',
-    padding: '16px 32px',
-    fontSize: '1rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    boxShadow: '0 10px 30px rgba(239, 68, 68, 0.3)',
+  const disabledButtonStyle = {
+    ...primaryButtonStyle,
+    background: 'rgba(255, 255, 255, 0.1)',
+    cursor: 'not-allowed',
+    boxShadow: 'none',
   };
 
-  const deleteButtonHoverStyle = {
-    ...deleteButtonStyle,
-    transform: 'translateY(-3px)',
-    boxShadow: '0 15px 40px rgba(239, 68, 68, 0.4)',
-  };
-
-  const backButtonStyle = {
+  const secondaryButtonStyle = {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
@@ -263,7 +284,7 @@ export default function PostDetailPage() {
     color: 'rgba(255, 255, 255, 0.7)',
     border: '2px solid rgba(255, 255, 255, 0.2)',
     borderRadius: '50px',
-    padding: '14px 28px',
+    padding: '16px 32px',
     fontSize: '1rem',
     fontWeight: '500',
     textDecoration: 'none',
@@ -272,8 +293,8 @@ export default function PostDetailPage() {
     backdropFilter: 'blur(10px)',
   };
 
-  const backButtonHoverStyle = {
-    ...backButtonStyle,
+  const secondaryButtonHoverStyle = {
+    ...secondaryButtonStyle,
     color: 'white',
     border: '2px solid rgba(255, 255, 255, 0.4)',
     background: 'rgba(255, 255, 255, 0.05)',
@@ -298,13 +319,35 @@ export default function PostDetailPage() {
     background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent)',
   };
 
+  const loadingStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '100vh',
+    color: 'white',
+    fontSize: '1.5rem',
+    gap: '20px',
+  };
+
+  const errorStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '100vh',
+    color: '#ff6b6b',
+    fontSize: '1.5rem',
+    textAlign: 'center',
+    flexDirection: 'column',
+    gap: '20px',
+  };
+
   if (loading) {
     return (
       <div style={containerStyle}>
         <div style={backgroundOverlayStyle}></div>
         <div style={loadingStyle}>
-          <Loader2 size={48} style={{ animation: 'spin 1s linear infinite' }} />
-          <span>Loading your story...</span>
+          <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite' }} />
+          Loading your masterpiece...
         </div>
       </div>
     );
@@ -315,11 +358,17 @@ export default function PostDetailPage() {
       <div style={containerStyle}>
         <div style={backgroundOverlayStyle}></div>
         <div style={errorStyle}>
-          <Wand2 size={48} color="rgba(255, 119, 119, 0.8)" />
-          <span>Something went wrong: {error.message}</span>
-          <Link href="/posts" style={backButtonStyle}>
+          <Zap size={48} color="#ff6b6b" />
+          <div>Error: {error.message}</div>
+          <Link 
+            href="/posts"
+            style={{
+              ...secondaryButtonStyle,
+              marginTop: '20px',
+            }}
+          >
             <ArrowLeft size={18} />
-            Return to Stories
+            Return to Posts
           </Link>
         </div>
       </div>
@@ -331,11 +380,17 @@ export default function PostDetailPage() {
       <div style={containerStyle}>
         <div style={backgroundOverlayStyle}></div>
         <div style={errorStyle}>
-          <FileText size={48} color="rgba(255, 255, 255, 0.5)" />
-          <span>Story not found.</span>
-          <Link href="/posts" style={backButtonStyle}>
+          <FileText size={48} color="#ff6b6b" />
+          <div>Post not found.</div>
+          <Link 
+            href="/posts"
+            style={{
+              ...secondaryButtonStyle,
+              marginTop: '20px',
+            }}
+          >
             <ArrowLeft size={18} />
-            Return to Stories
+            Return to Posts
           </Link>
         </div>
       </div>
@@ -384,7 +439,8 @@ export default function PostDetailPage() {
               <Stars size={32} color="rgba(255, 255, 255, 0.4)" />
             </div>
             <h1 style={titleStyle}>
-              {post.title || 'Untitled Story'}
+              <Wand2 size={60} style={{ display: 'inline-block', marginRight: '20px', verticalAlign: 'middle' }} />
+              Edit Magic
             </h1>
             <div style={{
               position: 'absolute',
@@ -395,30 +451,18 @@ export default function PostDetailPage() {
               <Sparkles size={28} color="rgba(255, 255, 255, 0.3)" />
             </div>
           </div>
-          
-          {/* Post Metadata */}
-          <div style={postMetaStyle}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Calendar size={16} />
-              {post.createdAt ? new Date(post.createdAt).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              }) : 'Recently'}
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <User size={16} />
-              Author
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Eye size={16} />
-              Reading Mode
-            </span>
-          </div>
+          <p style={subtitleStyle}>
+            <Zap size={20} style={{ display: 'inline-block', marginRight: '10px', verticalAlign: 'middle' }} />
+            Refine your extraordinary creation
+          </p>
         </div>
 
-        {/* Content Card */}
-        <div style={cardStyle}>
+        {/* Title Input Card */}
+        <div 
+          style={titleHovered ? cardHoverStyle : cardStyle}
+          onMouseEnter={() => setTitleHovered(true)}
+          onMouseLeave={() => setTitleHovered(false)}
+        >
           <div style={{
             position: 'absolute',
             top: '20px',
@@ -428,44 +472,84 @@ export default function PostDetailPage() {
             <FileText size={24} color="white" />
           </div>
           
-          <div style={contentStyle}>
+          <label style={labelStyle}>
+            <Edit3 size={18} />
+            Title of Your Masterpiece
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onFocus={() => setTitleFocused(true)}
+            onBlur={() => setTitleFocused(false)}
+            placeholder="Enter something extraordinary..."
+            style={titleFocused ? inputFocusStyle : inputStyle}
+          />
+        </div>
+
+        {/* Editor Card */}
+        <div 
+          style={editorHovered ? cardHoverStyle : cardStyle}
+          onMouseEnter={() => setEditorHovered(true)}
+          onMouseLeave={() => setEditorHovered(false)}
+        >
+          <div style={{
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            opacity: '0.3',
+          }}>
+            <PenTool size={24} color="white" />
+          </div>
+          
+          <label style={labelStyle}>
+            <Edit3 size={18} />
+            Craft Your Story
+          </label>
+          <div style={editorContainerStyle}>
             <SimpleEditor
-              initialContent={post.content}
-              editable={false}
+              initialContent={content}
+              onUpdate={(newContent) => setContent(JSON.stringify(newContent))}
             />
           </div>
         </div>
 
         {/* Action Buttons */}
         <div style={buttonContainerStyle}>
-          <Link 
-            href={`/posts/${post.id}/edit`}
-            onMouseEnter={() => setEditHovered(true)}
-            onMouseLeave={() => setEditHovered(false)}
-            style={editHovered ? editButtonHoverStyle : editButtonStyle}
-          >
-            <Edit3 size={18} />
-            Edit Story
-          </Link>
-
           <button
-            onClick={handleDelete}
-            onMouseEnter={() => setDeleteHovered(true)}
-            onMouseLeave={() => setDeleteHovered(false)}
-            style={deleteHovered ? deleteButtonHoverStyle : deleteButtonStyle}
+            onClick={handleSave}
+            disabled={isSaving || !title.trim()}
+            onMouseEnter={() => setSaveHovered(true)}
+            onMouseLeave={() => setSaveHovered(false)}
+            style={
+              isSaving || !title.trim() 
+                ? disabledButtonStyle 
+                : saveHovered 
+                  ? primaryButtonHoverStyle 
+                  : primaryButtonStyle
+            }
           >
-            <Trash2 size={18} />
-            Delete Story
+            {isSaving ? (
+              <>
+                <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                Saving Magic...
+              </>
+            ) : (
+              <>
+                <Save size={20} />
+                Save Changes
+              </>
+            )}
           </button>
 
           <Link 
-            href="/posts"
-            onMouseEnter={() => setBackHovered(true)}
-            onMouseLeave={() => setBackHovered(false)}
-            style={backHovered ? backButtonHoverStyle : backButtonStyle}
+            href={`/posts/${id}`}
+            onMouseEnter={() => setCancelHovered(true)}
+            onMouseLeave={() => setCancelHovered(false)}
+            style={cancelHovered ? secondaryButtonHoverStyle : secondaryButtonStyle}
           >
             <ArrowLeft size={18} />
-            Back to Archive
+            Return to Post
           </Link>
         </div>
 
@@ -473,7 +557,7 @@ export default function PostDetailPage() {
         <div style={decorativeLineStyle}>
           <div style={lineStyle}></div>
           <Sparkles size={16} />
-          <span>End of story</span>
+          <span>Perfecting your creation</span>
           <Sparkles size={16} />
           <div style={lineStyle}></div>
         </div>
@@ -515,6 +599,11 @@ export default function PostDetailPage() {
             opacity: 0.8; 
             transform: scale(1.1);
           }
+        }
+        
+        input::placeholder {
+          color: rgba(255, 255, 255, 0.4);
+          font-style: italic;
         }
         
         /* Custom scrollbar */
