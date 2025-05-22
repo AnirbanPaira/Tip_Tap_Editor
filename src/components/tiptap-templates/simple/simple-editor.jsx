@@ -214,7 +214,7 @@ export function SimpleEditor({ initialContent, onUpdate, editable = true }) {
     content: initialContent,
     onUpdate: ({ editor }) => {
       // Extract content as JSON and pass it to the onUpdate prop
-      onUpdate(editor.getJSON());
+      onUpdate(editor.getHTML());
     },
   });
 
